@@ -3,19 +3,36 @@ This is a way to set up random groups of three people from an org group for disc
 
 
 # The Logic Apps
+
 ## la-watercooler2
 ![Alt text](/images/la-watercooler2.png?raw=true "Get graph info Logic App")
-This is the view of the Logic App that will get the users from the manager in the MSFT Graph
-## SendWCMessages
+
+This is the view of the Logic App that will get the users from the manager in the MSFT Graph. This is called from the ADF orchestrator pipeline.
+
+## SendWCMessages Logic App
+
+### Get the list of emails for the dynamic email
+
 ![Alt text](/images/SendWCMessagesSQLQuery.png?raw=true "image showing the first two steps of the SendWCMessages Logic App")
-```SQL
+
+These are the first two steps of the Logic App to send the dynamic emails. The SQL step will get the groupings that were created via the Stored Procedure.The Where statement makes sure that this is the same day data.
+#### Code:
+```
+SQL
 SELECT [GroupAssigned]
       ,[emailchain]
       ,CONVERT(DATE, [AssignmentDate]) AS [UPDATEDATE]
   FROM [dbo].[WaterCoolerEmailGroupings]
-  WHERE DATEDIFF(DAY,[AssignmentDate],GETDATE()) = 0![image](https://user-images.githubusercontent.com/46489667/193861405-824939e4-30fa-469a-84fc-fdce23bc581e.png)
-```
+  WHERE DATEDIFF(DAY,[AssignmentDate],GETDATE()) = 0
+  
+  ```
+  ### Send the Outlook messages
+ This is the image showing the Outlook connector in the Logic App. This step will create and send the groupings of people, along with the current month.
+ 
 ![Alt text](/images/SendWCMessagesOutlookMail.png?raw=true "image showing the send mail section of the SendWCMessages Logic App")
+
+#### Outlook Connector Email Body example:
+
 ```
 Welcome to the next round of our networking pods.  We have a number of new members on the team, and this is a good opportunity to make connections as members of the same team.  As a reminder, the goal of this is to have a casual meeting to get to know others on the team better.   While this is not mandatory, I do hope that you take this opportunity to network!  
 
@@ -25,24 +42,31 @@ Enjoy the conversation!
 
 *** This was a completely automated task. Apologies if things don't seem 'human'.
 ```
+
 ## Subject Line Expression
 This creates the dynamic month in the subject line of the email
+#### Expression Code:
 ```
 On Behalf of [Enter name]: @{formatDateTime(body('Parse_JSON')?['UPDATEDATE'], 'MMMM')} Watercooler pairings
 ```
-## To line Expression
+
+#### To: line Expression Code:
+
 This will take the semi-colon delimited grouping of three and use it as the email To: line
+
 ```
 @{body('Parse_JSON')?['emailchain']}
 ```
-## HTTP request to tell the ADF pipeline it is complete
+### HTTP request to tell the ADF pipeline it is complete
 ![Alt text](/images/SendWCMessagesHTTP.png?raw=true "image showing the HTTP response back to the ADF call")
 
 
 
-# SQL Stored Proc
+# SQL Stored Procs
+These stored procedures will perform the logic that creates the random groupings of three users for the water cooler.
 
-The dbo.writeemployees.sql SP is used to take the JSON file that is in Blob and create a table of users using OPENJSON
+### The dbo.writeemployees.sql SP is used to take the JSON file that is in Blob and create a table of users using OPENJSON
+
 ```SQL
 CREATE   PROCEDURE [dbo].[writeemployees]
 (
