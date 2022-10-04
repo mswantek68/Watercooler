@@ -1,0 +1,55 @@
+{
+	"name": "AzureSqlTable1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "graphid",
+				"type": "nvarchar"
+			},
+			{
+				"name": "displayName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "givenName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "surname",
+				"type": "nvarchar"
+			},
+			{
+				"name": "jobTitle",
+				"type": "nvarchar"
+			},
+			{
+				"name": "officeLocation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "UPN",
+				"type": "nvarchar"
+			},
+			{
+				"name": "accountEnabled",
+				"type": "bit"
+			},
+			{
+				"name": "TableDate",
+				"type": "datetime2",
+				"scale": 7
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "WaterCoolerList"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

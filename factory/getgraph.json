@@ -1,0 +1,9 @@
+{
+	"name": "getgraph",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "038e5748-bead-4492-b756-39b4569dc75b",
+		"tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+	}
+}

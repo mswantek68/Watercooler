@@ -1,0 +1,98 @@
+{
+	"name": "PL_LOAD_RANK_SEND",
+	"properties": {
+		"activities": [
+			{
+				"name": "Call Logic App to load graph data from AD",
+				"type": "WebHook",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-28.northcentralus.logic.azure.com:443/workflows/ea37748d6f52474fbfcd152f3959714a/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zUSKChskVX2wFyjVRpZn53lK3SFx7ouD-lxvx2S1G3I",
+					"method": "POST",
+					"timeout": "00:01:00"
+				}
+			},
+			{
+				"name": "parse JSON Load to SQL",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Call Logic App to load graph data from AD",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "ParseJSONtoSQL",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "AddSeedandRank StoredProc",
+				"description": "This is a SP to rank and create groupings for the Water Cooler.\nThis is stored in swanteksql.database.windows.net in the swantekdb ",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "parse JSON Load to SQL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[AddSeedandRank]"
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send the message via Outlook",
+				"type": "WebHook",
+				"dependsOn": [
+					{
+						"activity": "AddSeedandRank StoredProc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-35.eastus.logic.azure.com:443/workflows/787473c9b411408086858a5f4c9d58c0/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=MrK-iKS0VBm_PipV8FDYRG64J-4qpOgJ2nxk5qgryz0",
+					"method": "POST",
+					"timeout": "00:04:00"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-05-17T00:45:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

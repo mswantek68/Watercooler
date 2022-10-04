@@ -1,0 +1,105 @@
+{
+	"name": "graphJSON",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "KoreyGroup",
+				"folderPath": "graphlist",
+				"fileSystem": "input"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"@odata.context": {
+					"type": "string"
+				},
+				"value": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"@odata.type": {
+								"type": "string"
+							},
+							"accountEnabled": {
+								"type": "boolean"
+							},
+							"businessPhones": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"city": {
+								"type": "string"
+							},
+							"companyName": {
+								"type": "string"
+							},
+							"country": {
+								"type": "null"
+							},
+							"department": {
+								"type": "string"
+							},
+							"displayName": {
+								"type": "string"
+							},
+							"givenName": {
+								"type": "string"
+							},
+							"id": {
+								"type": "string"
+							},
+							"jobTitle": {
+								"type": "string"
+							},
+							"mail": {
+								"type": "string"
+							},
+							"mailNickname": {
+								"type": "string"
+							},
+							"mobilePhone": {
+								"type": "string"
+							},
+							"officeLocation": {
+								"type": "string"
+							},
+							"postalCode": {
+								"type": "null"
+							},
+							"preferredLanguage": {
+								"type": "null"
+							},
+							"state": {
+								"type": "null"
+							},
+							"streetAddress": {
+								"type": "null"
+							},
+							"surname": {
+								"type": "string"
+							},
+							"userPrincipalName": {
+								"type": "string"
+							},
+							"userType": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

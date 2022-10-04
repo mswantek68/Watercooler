@@ -1,0 +1,119 @@
+{
+	"name": "ParseJSONtoSQL",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable1",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Flatten1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "RemoveNonMembers"
+				},
+				{
+					"name": "filter1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {@odata.context} as string,",
+				"          value as ({@odata.type} as string, accountEnabled as boolean, businessPhones as string[], city as string, companyName as string, country as string, department as string, displayName as string, givenName as string, id as string, jobTitle as string, mail as string, mailNickname as string, mobilePhone as string, officeLocation as string, postalCode as string, preferredLanguage as string, state as string, streetAddress as string, surname as string, userPrincipalName as string, userType as string)[]",
+				"     ),",
+				"     useSchema: false,",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'json',",
+				"     fileSystem: 'input',",
+				"     folderPath: 'graphlist',",
+				"     fileName: 'KoreyList',",
+				"     documentForm: 'documentPerLine') ~> source1",
+				"source1 foldDown(unroll(value, value),",
+				"     mapColumn(",
+				"          graphid = value.id,",
+				"          displayName = value.displayName,",
+				"          givenName = value.givenName,",
+				"          surname = value.surname,",
+				"          jobTitle = value.jobTitle,",
+				"          officeLocation = value.officeLocation,",
+				"          UPN = value.userPrincipalName,",
+				"          accountEnabled = value.accountEnabled",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> Flatten1",
+				"Flatten1 derive(TableDate = currentDate()) ~> DerivedColumn1",
+				"filter1 select(mapColumn(",
+				"          graphid,",
+				"          displayName,",
+				"          givenName,",
+				"          surname,",
+				"          jobTitle,",
+				"          officeLocation,",
+				"          UPN,",
+				"          accountEnabled,",
+				"          TableDate",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Select1",
+				"DerivedColumn1 filter(UPN != 'dequint@microsoft.com') ~> RemoveNonMembers",
+				"RemoveNonMembers filter(UPN != 'syflemin@microsoft.com') ~> filter1",
+				"Select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          graphid as string,",
+				"          displayName as string,",
+				"          givenName as string,",
+				"          surname as string,",
+				"          jobTitle as string,",
+				"          officeLocation as string,",
+				"          UPN as string,",
+				"          accountEnabled as boolean,",
+				"          TableDate as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          graphid,",
+				"          displayName,",
+				"          givenName,",
+				"          surname,",
+				"          jobTitle,",
+				"          officeLocation,",
+				"          UPN,",
+				"          accountEnabled,",
+				"          TableDate",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

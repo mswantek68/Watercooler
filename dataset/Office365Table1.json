@@ -1,0 +1,17 @@
+{
+	"name": "Office365Table1",
+	"properties": {
+		"description": "Gets users",
+		"linkedServiceName": {
+			"referenceName": "Office3651",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Office365Table",
+		"schema": [],
+		"typeProperties": {
+			"tableName": "BasicDataSet_v0.GroupMembers_v0"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
