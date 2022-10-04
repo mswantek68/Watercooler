@@ -1,5 +1,12 @@
 # Watercooler App
 This is a way to set up random groups of three people from an org group for discussions. Will pull users from the graph, create random pairings and then email them via ADF pipelines and connected Logic Apps. The solution needs the SQL bacpac to be deployed which will house the tables used, as well as the SQL Stored Procedures that are run to create the random user pairings of three. The requirement is to run the Logic app that will get the users under a certain manager in AAD, this JSON output is then saved to a blob location.
+# The ADF pipeline
+ADF pipelines will do most of the work to orchestrate the solution to run. There is a recurrence trigger on the ADF Pipeline to run once a month. This will allow the organization the ability to configure it once, and the monthly trigger will call the graph api and return the current users of the manager, parse them from JSON into a SQL table, call a stored procedure to apply the ranking logic and to create random pairing of three people. Then the ADF Pipeline will call a Logic App that will create and send an outlook email to the groupings of three, CC the manager, and then will complete its run. 
+*** Future updates could involve utilizing the ability to create Team Meetings, or to create a single date and time for the Watercooler, and the service could create a Meeting with specific "Breakout rooms" for the random pairings. Think of it as virtual speed networking! 
+
+## The ADF "orchestrater" pipeline
+
+![Alt text](/images/ADFOrchestrator.png?raw=true "Get graph info Logic App")
 
 
 # The Logic Apps
