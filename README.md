@@ -4,7 +4,7 @@ This is a way to set up random groups of three people from an org group for disc
 
 # The Logic App
 ## la-watercooler2
-
+![Alt text](/images/la-watercooler2.png?raw=true "Get graph info Logic App")
 
 
 
