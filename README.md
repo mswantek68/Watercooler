@@ -1,24 +1,24 @@
 # Watercooler App
 This is a way to set up random groups of three people from an org group for discussions. Will pull users from the graph, create random pairings and then email them via ADF pipelines and connected Logic Apps. The solution needs the SQL bacpac to be deployed which will house the tables used, as well as the SQL Stored Procedures that are run to create the random user pairings of three. The requirement is to run the Logic app that will get the users under a certain manager in AAD, this JSON output is then saved to a blob location.
-# The ADF pipeline
+## The ADF pipeline
 ADF pipelines will do most of the work to orchestrate the solution to run. There is a recurrence trigger on the ADF Pipeline to run once a month. This will allow the organization the ability to configure it once, and the monthly trigger will call the graph api and return the current users of the manager, parse them from JSON into a SQL table, call a stored procedure to apply the ranking logic and to create random pairing of three people. Then the ADF Pipeline will call a Logic App that will create and send an outlook email to the groupings of three, CC the manager, and then will complete its run. 
 *** Future updates could involve utilizing the ability to create Team Meetings, or to create a single date and time for the Watercooler, and the service could create a Meeting with specific "Breakout rooms" for the random pairings. Think of it as virtual speed networking! 
 
-## The ADF "orchestrater" pipeline
+#### The ADF "orchestrater" pipeline
 
-![Alt text](/images/ADFOrchestrator.png?raw=true "Get graph info Logic App")
+![Alt text](/images/ADFOrchestrator.png?raw=true "ADF Orchestrator")
 
 
-# The Logic Apps
+## The Logic Apps
 
-## la-watercooler2
+#### la-watercooler2
 ![Alt text](/images/la-watercooler2.png?raw=true "Get graph info Logic App")
 
 This is the view of the Logic App that will get the users from the manager in the MSFT Graph. This is called from the ADF orchestrator pipeline.
 
-## SendWCMessages Logic App
+### SendWCMessages Logic App
 
-### Get the list of emails for the dynamic email
+##### Get the list of emails for the dynamic email
 
 ![Alt text](/images/SendWCMessagesSQLQuery.png?raw=true "image showing the first two steps of the SendWCMessages Logic App")
 
@@ -33,7 +33,7 @@ SELECT [GroupAssigned]
   WHERE DATEDIFF(DAY,[AssignmentDate],GETDATE()) = 0
   
   ```
-  ### Send the Outlook messages
+ ### Send the Outlook messages
  This is the image showing the Outlook connector in the Logic App. This step will create and send the groupings of people, along with the current month.
  
 ![Alt text](/images/SendWCMessagesOutlookMail.png?raw=true "image showing the send mail section of the SendWCMessages Logic App")
@@ -50,7 +50,7 @@ Enjoy the conversation!
 *** This was a completely automated task. Apologies if things don't seem 'human'.
 ```
 
-## Subject Line Expression
+### Subject Line Expression
 This creates the dynamic month in the subject line of the email
 #### Expression Code:
 ```
@@ -64,15 +64,15 @@ This will take the semi-colon delimited grouping of three and use it as the emai
 ```
 @{body('Parse_JSON')?['emailchain']}
 ```
-### HTTP request to tell the ADF pipeline it is complete
+#### HTTP request to tell the ADF pipeline it is complete
 ![Alt text](/images/SendWCMessagesHTTP.png?raw=true "image showing the HTTP response back to the ADF call")
 
 
 
-# SQL Stored Procs
+## SQL Stored Procs
 These stored procedures will perform the logic that creates the random groupings of three users for the water cooler.
 
-### The dbo.writeemployees.sql SP is used to take the JSON file that is in Blob and create a table of users using OPENJSON
+#### The dbo.writeemployees.sql SP is used to take the JSON file that is in Blob and create a table of users using OPENJSON
 
 ```SQL
 CREATE   PROCEDURE [dbo].[writeemployees]
@@ -106,7 +106,10 @@ WITH (
     [UPN] nvarchar(200) '$.userPrincipalName')
 END
 ```
+
+#### SQL Stored Procedure to seed, rank and randomize
 The dbo.AddSeedandRank.sql Stored Proc is used to create the pairings of employees in groups. By default the groups are in 3's but the parameter can be modified as needed.
+
 ```SQL
 CREATE   PROCEDURE [dbo].[AddSeedandRank]
 AS
@@ -164,3 +167,8 @@ WHERE [TableDate] = (SELECT MAX([TableDate]) FROM [dbo].[RankTable] wcl1 WHERE [
 GROUP BY [GroupAssigned], [AssignmentDate];
 END
 ```
+## Additional Info
+I have just added the detail to the repo, and will be adding additional background and detail over time. I created this during my onboarding to Microsoft in 2021. It was utilized up until a reorganization occured in my organization. I hope someone can find value in it! 
+
+
+Sharing is caring!!!
