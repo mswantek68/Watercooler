@@ -1,0 +1,654 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "getgraph"
+		},
+		"AzureDataLakeStorage1_servicePrincipalCredential": {
+			"type": "secureString",
+			"metadata": "Secure string for 'servicePrincipalCredential' of 'AzureDataLakeStorage1'"
+		},
+		"AzureSqlDatabase1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase1'"
+		},
+		"Office3651_servicePrincipalKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'servicePrincipalKey' of 'Office3651'"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://adls2watercooler.dfs.core.windows.net"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": " f7fcc4e5-e6af-4ca4-9856-c616989bb347"
+		},
+		"Office3651_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "f7fcc4e5-e6af-4ca4-9856-c616989bb347"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/AddRank')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Stored procedure1",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[AddSeedandRank]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase1",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-02-22T15:24:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_LOAD_RANK_SEND')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Call Logic App to load graph data from AD",
+						"type": "WebHook",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://prod-28.northcentralus.logic.azure.com:443/workflows/ea37748d6f52474fbfcd152f3959714a/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zUSKChskVX2wFyjVRpZn53lK3SFx7ouD-lxvx2S1G3I",
+							"method": "POST",
+							"headers": {},
+							"body": {},
+							"timeout": "00:01:00"
+						}
+					},
+					{
+						"name": "parse JSON Load to SQL",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Call Logic App to load graph data from AD",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "ParseJSONtoSQL",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {},
+									"sink1": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "AddSeedandRank StoredProc",
+						"description": "This is a SP to rank and create groupings for the Water Cooler.\nThis is stored in swanteksql.database.windows.net in the swantekdb ",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "parse JSON Load to SQL",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[AddSeedandRank]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase1",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Send the message via Outlook",
+						"type": "WebHook",
+						"dependsOn": [
+							{
+								"activity": "AddSeedandRank StoredProc",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://prod-35.eastus.logic.azure.com:443/workflows/787473c9b411408086858a5f4c9d58c0/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=MrK-iKS0VBm_PipV8FDYRG64J-4qpOgJ2nxk5qgryz0",
+							"method": "POST",
+							"headers": {},
+							"body": {},
+							"timeout": "00:04:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-05-17T00:45:12Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/ParseJSONtoSQL')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ParseJSONtoSQL')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "parse",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "ParseJSONtoSQL",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {},
+									"sink1": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-03-14T18:28:48Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/ParseJSONtoSQL')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "graphid",
+						"type": "nvarchar"
+					},
+					{
+						"name": "displayName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "givenName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "surname",
+						"type": "nvarchar"
+					},
+					{
+						"name": "jobTitle",
+						"type": "nvarchar"
+					},
+					{
+						"name": "officeLocation",
+						"type": "nvarchar"
+					},
+					{
+						"name": "UPN",
+						"type": "nvarchar"
+					},
+					{
+						"name": "accountEnabled",
+						"type": "bit"
+					},
+					{
+						"name": "TableDate",
+						"type": "datetime2",
+						"scale": 7
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "WaterCoolerList"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Office365Table1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Gets users",
+				"linkedServiceName": {
+					"referenceName": "Office3651",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Office365Table",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "BasicDataSet_v0.GroupMembers_v0"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Office3651')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/graphJSON')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "KoreyGroup",
+						"folderPath": "graphlist",
+						"fileSystem": "input"
+					}
+				},
+				"schema": {
+					"type": "object",
+					"properties": {
+						"@odata.context": {
+							"type": "string"
+						},
+						"value": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"@odata.type": {
+										"type": "string"
+									},
+									"accountEnabled": {
+										"type": "boolean"
+									},
+									"businessPhones": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									},
+									"city": {
+										"type": "string"
+									},
+									"companyName": {
+										"type": "string"
+									},
+									"country": {
+										"type": "null"
+									},
+									"department": {
+										"type": "string"
+									},
+									"displayName": {
+										"type": "string"
+									},
+									"givenName": {
+										"type": "string"
+									},
+									"id": {
+										"type": "string"
+									},
+									"jobTitle": {
+										"type": "string"
+									},
+									"mail": {
+										"type": "string"
+									},
+									"mailNickname": {
+										"type": "string"
+									},
+									"mobilePhone": {
+										"type": "string"
+									},
+									"officeLocation": {
+										"type": "string"
+									},
+									"postalCode": {
+										"type": "null"
+									},
+									"preferredLanguage": {
+										"type": "null"
+									},
+									"state": {
+										"type": "null"
+									},
+									"streetAddress": {
+										"type": "null"
+									},
+									"surname": {
+										"type": "string"
+									},
+									"userPrincipalName": {
+										"type": "string"
+									},
+									"userType": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+					"tenant": "[parameters('AzureDataLakeStorage1_properties_typeProperties_tenant')]",
+					"servicePrincipalId": "[parameters('AzureDataLakeStorage1_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalCredentialType": "ServicePrincipalKey",
+					"servicePrincipalCredential": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage1_servicePrincipalCredential')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase1')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabase1_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Office3651')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Office365",
+				"typeProperties": {
+					"office365TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+					"servicePrincipalTenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+					"servicePrincipalId": "[parameters('Office3651_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalKey": {
+						"type": "SecureString",
+						"value": "[parameters('Office3651_servicePrincipalKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Water Cooler Trigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "PL_LOAD_RANK_SEND",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Month",
+						"interval": 1,
+						"startTime": "2022-05-16T00:02:00Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								8
+							],
+							"monthDays": [
+								4
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/PL_LOAD_RANK_SEND')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ParseJSONtoSQL')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "AzureDataLakeStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Flatten1"
+						},
+						{
+							"name": "DerivedColumn1"
+						},
+						{
+							"name": "Select1"
+						},
+						{
+							"name": "RemoveNonMembers"
+						},
+						{
+							"name": "filter1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {@odata.context} as string,",
+						"          value as ({@odata.type} as string, accountEnabled as boolean, businessPhones as string[], city as string, companyName as string, country as string, department as string, displayName as string, givenName as string, id as string, jobTitle as string, mail as string, mailNickname as string, mobilePhone as string, officeLocation as string, postalCode as string, preferredLanguage as string, state as string, streetAddress as string, surname as string, userPrincipalName as string, userType as string)[]",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'json',",
+						"     fileSystem: 'input',",
+						"     folderPath: 'graphlist',",
+						"     fileName: 'KoreyList',",
+						"     documentForm: 'documentPerLine') ~> source1",
+						"source1 foldDown(unroll(value, value),",
+						"     mapColumn(",
+						"          graphid = value.id,",
+						"          displayName = value.displayName,",
+						"          givenName = value.givenName,",
+						"          surname = value.surname,",
+						"          jobTitle = value.jobTitle,",
+						"          officeLocation = value.officeLocation,",
+						"          UPN = value.userPrincipalName,",
+						"          accountEnabled = value.accountEnabled",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> Flatten1",
+						"Flatten1 derive(TableDate = currentDate()) ~> DerivedColumn1",
+						"filter1 select(mapColumn(",
+						"          graphid,",
+						"          displayName,",
+						"          givenName,",
+						"          surname,",
+						"          jobTitle,",
+						"          officeLocation,",
+						"          UPN,",
+						"          accountEnabled,",
+						"          TableDate",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Select1",
+						"DerivedColumn1 filter(UPN != 'dequint@microsoft.com') ~> RemoveNonMembers",
+						"RemoveNonMembers filter(UPN != 'syflemin@microsoft.com') ~> filter1",
+						"Select1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          graphid as string,",
+						"          displayName as string,",
+						"          givenName as string,",
+						"          surname as string,",
+						"          jobTitle as string,",
+						"          officeLocation as string,",
+						"          UPN as string,",
+						"          accountEnabled as boolean,",
+						"          TableDate as timestamp",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          graphid,",
+						"          displayName,",
+						"          givenName,",
+						"          surname,",
+						"          jobTitle,",
+						"          officeLocation,",
+						"          UPN,",
+						"          accountEnabled,",
+						"          TableDate",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable1')]"
+			]
+		}
+	]
+}
