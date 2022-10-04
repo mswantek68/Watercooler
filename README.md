@@ -2,7 +2,7 @@
 This is a way to set up random groups of three people from an org group for discussions. Will pull users from the graph, create random pairings and then email them via ADF pipelines and connected Logic Apps. The solution needs the SQL bacpac to be deployed which will house the tables used, as well as the SQL Stored Procedures that are run to create the random user pairings of three. The requirement is to run the Logic app that will get the users under a certain manager in AAD, this JSON output is then saved to a blob location.
 
 
-# The Logic App2
+# The Logic Apps
 ## la-watercooler2
 ![Alt text](/images/la-watercooler2.png?raw=true "Get graph info Logic App")
 This is the view of the Logic App that will get the users from the manager in the MSFT Graph
