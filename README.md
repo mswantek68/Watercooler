@@ -167,6 +167,10 @@ WHERE [TableDate] = (SELECT MAX([TableDate]) FROM [dbo].[RankTable] wcl1 WHERE [
 GROUP BY [GroupAssigned], [AssignmentDate];
 END
 ```
+## The SQL DacPac
+This file is the structure of the db and tables need by the pipelines, etc. Restore this file using the [Deploy data-tier Application](https://learn.microsoft.com/en-us/sql/relational-databases/data-tier-applications/data-tier-applications?view=sql-server-ver16) in SSMS. This will created the same tables used in this deployment, where you can then load your user data.
+
+
 ## Additional Info
 I have just added the detail to the repo, and will be adding additional background and detail over time. I created this during my onboarding to Microsoft in 2021. It was utilized up until a reorganization occured in my organization. I hope someone can find value in it! 
 
